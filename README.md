@@ -1,88 +1,242 @@
 # shareModels4rm01
-RM-01 内网共享模型文件夹
 
-以下是为你定制的 完整、安全、可重复使用 的 NFS 共享配置脚本集，已根据你的真实环境验证和优化：
+RM-01 内网共享模型文件夹 - NFS 配置工具集
 
-📁 文件结构建议（保存到你的工作目录）
-123456
-nfs-setup/
-├── server/  
-│   └── setup_nfs_server.sh          # 10.10.99.98 上运行
-└── client/  
-    ├── cleanup_nfs_client.sh        # 10.10.99.99 上运行（可选清理）
-    └── setup_nfs_client.sh          # 10.10.99.99 上运行（挂载到 ~/models98）
-🖥️ 服务端脚本（server/setup_nfs_server.sh）
-bash
-1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253
-#!/bin/bash
-# setup_nfs_server.sh
-# Run on 10.10.99.98 (AGX) as rm01 with sudo privilege
-# Purpose: Share /home/rm01/models to 10.10.99.99 with minimal disruption
+---
 
-set -e
+## 📋 项目简介
 
-echo "[*] Configuring NFS server for /home/rm01/models..."
+本项目提供了一套完整、安全、可重复使用的 NFS 共享配置脚本，用于在 RM-01 内网环境中共享模型文件。通过自动化脚本简化了 NFS 服务端和客户端的配置过程。
 
-# 1. Ensure directory ownership and permissions
+**环境信息：**
+- **服务端 IP**: 10.10.99.98 (AGX)
+- **客户端 IP**: 10.10.99.99
+- **用户名**: rm01
+- **共享目录**: `/home/rm01/models`
+- **挂载点**: `/home/rm01/models98`
 
-🖥️ 客户端清理脚本（client/cleanup_nfs_client.sh）
-bash
-1234567891011121314151617181920212223242526
-#!/bin/bash
-# cleanup_nfs_client.sh
-# Run on 10.10.99.99 to remove previous NFS client configs
+---
 
-set -e
+## 📁 项目结构
 
-echo "[*] Cleaning up previous NFS client setup..."
+```
+shareModels4rm01/
+├── README.md                         # 本文档
+├── server/
+│   └── setup_nfs_server.sh           # NFS 服务端配置脚本
+└── client/
+    ├── cleanup_nfs_client.sh         # NFS 客户端清理脚本（可选）
+    └── setup_nfs_client.sh           # NFS 客户端配置脚本
+```
 
-# Stop autofs
-sudo systemctl stop autofs 2>/dev/null || true
+---
 
-🖥️ 客户端部署脚本（client/setup_nfs_client.sh）
-bash
-123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051
-#!/bin/bash
-# setup_nfs_client.sh
-# Run on 10.10.99.99
-# Mounts 10.10.99.98:/home/rm01/models → /home/rm01/models98
+## 🚀 快速开始
 
-set -e
+### 第一步：配置 NFS 服务端（在 10.10.99.98 上运行）
 
-TARGET_DIR="/home/rm01/models98"
-SERVER_PATH="10.10.99.98:/home/rm01/models"
-
-
-✅ 使用说明
-在 98（AGX）上：
-bash
-123
-cd nfs-setup/server
-chmod +x setup_nfs_server.sh
+```bash
+cd server
 ./setup_nfs_server.sh
-在 99 上：
-bash
-1234567
-# 可选：清理旧配置
-cd nfs-setup/client
-chmod +x cleanup_nfs_client.sh setup_nfs_client.sh
+```
+
+**脚本功能：**
+- 创建和配置共享目录 `/home/rm01/models`
+- 安装 NFS 服务器软件包
+- 配置 `/etc/exports` 文件
+- 设置 UFW 防火墙规则（仅允许客户端 IP）
+- 启动并启用 NFS 服务
+
+### 第二步：配置 NFS 客户端（在 10.10.99.99 上运行）
+
+**可选 - 清理旧配置：**
+```bash
+cd client
 ./cleanup_nfs_client.sh
+```
 
-# 部署新配置
+**配置新的挂载：**
+```bash
+cd client
 ./setup_nfs_client.sh
-🔒 安全与可靠性保障
-特性
-说明
-零密码
-NFS 无认证，靠 IP 白名单
-业务无影响
-不重置 UFW，保留 58000-59999
-启动顺序无关
-autofs 按需挂载
-权限最小化
-仅开放必要目录和端口
-可重复运行
-脚本幂等（多次运行安全）
-💡 保存建议：将整个 nfs-setup/ 目录纳入你的项目仓库或文档，未来可直接复用。
+```
 
-如果需要支持更多客户端、只读模式或日志审计，可在此基础上扩展。现在你可以放心保存这套脚本！
+**脚本功能：**
+- 安装 NFS 客户端和 autofs 软件包
+- 创建挂载点目录 `/home/rm01/models98`
+- 配置 autofs 实现按需自动挂载
+- 测试挂载并验证连接
+
+### 第三步：验证配置
+
+在客户端访问共享目录：
+```bash
+cd /home/rm01/models98
+ls -lh
+```
+
+首次访问时，autofs 会自动挂载 NFS 共享目录。
+
+---
+
+## 📖 详细说明
+
+### 服务端脚本 (`server/setup_nfs_server.sh`)
+
+**运行环境：** 10.10.99.98 (AGX)  
+**需要权限：** sudo
+
+**主要功能：**
+1. ✅ 确保共享目录存在并设置正确权限
+2. ✅ 安装 `nfs-kernel-server` 软件包
+3. ✅ 配置 `/etc/exports` 允许客户端访问
+4. ✅ 配置 UFW 防火墙规则（端口 2049, 111, 20048）
+5. ✅ 启动和启用 NFS 服务
+6. ✅ 验证配置并显示导出列表
+
+**安全特性：**
+- IP 白名单限制（仅允许 10.10.99.99）
+- 不重置现有 UFW 规则，保留端口 58000-59999
+- 使用最小权限原则
+
+**幂等性：** 可以安全地多次运行，不会产生重复配置。
+
+---
+
+### 客户端清理脚本 (`client/cleanup_nfs_client.sh`)
+
+**运行环境：** 10.10.99.99  
+**需要权限：** sudo
+
+**主要功能：**
+1. ✅ 停止并禁用 autofs 服务
+2. ✅ 卸载已挂载的 NFS 目录
+3. ✅ 删除 autofs 配置文件
+4. ✅ 清理 `/etc/fstab` 中的 NFS 条目
+5. ✅ 移除空的挂载点目录
+
+**使用场景：**
+- 重新配置 NFS 客户端之前
+- 迁移或更换 NFS 服务器
+- 排查挂载问题时的清理工作
+
+---
+
+### 客户端配置脚本 (`client/setup_nfs_client.sh`)
+
+**运行环境：** 10.10.99.99  
+**需要权限：** sudo
+
+**主要功能：**
+1. ✅ 安装 `nfs-common` 和 `autofs` 软件包
+2. ✅ 创建挂载点目录 `/home/rm01/models98`
+3. ✅ 测试 NFS 服务器连通性
+4. ✅ 配置 autofs 自动挂载（超时 300 秒）
+5. ✅ 启动和启用 autofs 服务
+6. ✅ 验证挂载是否成功
+
+**挂载选项：**
+- `rw`: 读写模式
+- `hard`: 硬挂载（确保数据完整性）
+- `intr`: 允许中断
+- `timeo=600`: 超时 60 秒
+- `retrans=3`: 重传 3 次
+
+**自动挂载特性：**
+- 按需挂载：访问目录时自动挂载
+- 空闲超时：300 秒无访问后自动卸载
+- 开机自启：autofs 服务随系统启动
+
+**幂等性：** 可以安全地多次运行，不会产生重复配置。
+
+---
+
+## 🔒 安全与可靠性
+
+| 特性 | 说明 |
+|------|------|
+| **零密码认证** | NFS 基于 IP 白名单，无需密码 |
+| **业务无影响** | 不重置 UFW，保留现有规则（58000-59999 端口） |
+| **启动顺序无关** | autofs 按需挂载，不依赖启动顺序 |
+| **权限最小化** | 仅开放必要目录和端口 |
+| **可重复运行** | 所有脚本都是幂等的，多次运行安全 |
+| **故障恢复** | 硬挂载模式确保数据完整性 |
+
+---
+
+## 🛠️ 故障排查
+
+### 服务端问题
+
+**检查 NFS 服务状态：**
+```bash
+sudo systemctl status nfs-kernel-server
+```
+
+**查看导出列表：**
+```bash
+sudo exportfs -v
+```
+
+**检查防火墙规则：**
+```bash
+sudo ufw status
+```
+
+### 客户端问题
+
+**检查 autofs 服务：**
+```bash
+sudo systemctl status autofs
+```
+
+**查看 autofs 日志：**
+```bash
+journalctl -u autofs -n 50
+```
+
+**手动测试挂载：**
+```bash
+showmount -e 10.10.99.98
+sudo mount -t nfs 10.10.99.98:/home/rm01/models /home/rm01/models98
+```
+
+**调试 autofs：**
+```bash
+sudo automount -f -v
+```
+
+---
+
+## 📝 注意事项
+
+1. **服务端必须先配置**：确保在配置客户端之前，服务端已经正确配置并运行
+2. **网络连通性**：确保两台机器之间的网络连通，防火墙规则允许 NFS 流量
+3. **用户权限**：脚本需要 sudo 权限执行
+4. **文件权限**：共享目录的文件权限会影响客户端的访问权限
+5. **备份重要数据**：在运行清理脚本前，确保重要数据已备份
+
+---
+
+## 🔄 扩展功能
+
+如需以下高级功能，可在现有脚本基础上扩展：
+
+- 支持多个客户端 IP
+- 只读挂载模式
+- NFSv4 配置
+- Kerberos 认证
+- 访问日志审计
+- 性能优化调优
+
+---
+
+## 📄 许可证
+
+本项目仅供内部使用。
+
+---
+
+## 💡 反馈与支持
+
+如有问题或建议，请联系系统管理员。
